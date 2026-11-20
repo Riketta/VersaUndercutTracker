@@ -16,6 +16,14 @@ local function makeRow(unitPrice, quantity, ownUnits)
     }
 end
 
+local function copyOf(record)
+    local out = {}
+    for key, value in pairs(record) do
+        out[key] = value
+    end
+    return out
+end
+
 local function ownedRecord(auctionID, quantity, status, opts)
     opts = opts or {}
     return {
@@ -158,6 +166,20 @@ describe("domain core", function()
         owned.records = {}
         core:onOwnedUpdated()
         assert.equals(2, #notify.dispatched)
+    end)
+
+    it("does not replay pre-session sale rows on the first snapshot", function()
+        -- reload + open AH: the server still carries the old sale ledger
+        core:onAhOpen()
+        owned.records = { ownedRecord(178305292, 4, 1, { buyout = 44000 }) }
+        core:onOwnedUpdated()
+        assert.equals(0, #notify.dispatched)
+        -- sales that happen AFTER the session baselined still alert
+        clock.t = clock.t + 30
+        table.insert(owned.records, copyOf(owned.records[1]))
+        core:onOwnedUpdated()
+        assert.equals(1, #notify.dispatched)
+        assert.equals("sold", notify.dispatched[1].kind)
     end)
 
     it("alerts partial sales and low quantity", function()

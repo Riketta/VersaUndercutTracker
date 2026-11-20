@@ -22,7 +22,9 @@ AuctiMogger's fork evidence on the same build):
    unit price` there), can repeat an auctionID, and vanish eventually.
    ACTIVE commodity rows carry the UNIT price in `buyoutAmount` (verified:
    60-lot at 954). Row order is unstable between queries. `GetOwnedAuctionTypes`
-   counts ACTIVE keys only.
+   counts ACTIVE keys only. The ledger SURVIVES reloads server-side: the
+   first owned snapshot of a session baselines it silently (no replay of
+   pre-session sales as alerts; only growth after the baseline is a sale).
 4. **Gates** (script-context): `QueryOwnedAuctions` PASSES (~0.1s answer).
    Commodity `SendSearchQuery` PASSES (wire doc: 100 searches/min cap).
    Item `SendSearchQuery`/`QueryItem` are REFUSED (empty result sets).

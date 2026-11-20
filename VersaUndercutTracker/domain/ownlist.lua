@@ -18,6 +18,9 @@ V.domain = V.domain or {}
 ---@field cancelWindowUntil number session-seconds stamp: closures and new
 ---ledger rows inside the window are cancel-attributed (the fork's cancel
 ---payloads are not owned auctionIDs - verified garbage value 110)
+---@field baselined boolean set after the first ingested snapshot: the sale
+---ledger survives reloads server-side, so pre-session rows are accounted
+---silently - only growth after the baseline is a sale
 local OwnList = {}
 OwnList.__index = OwnList
 
@@ -34,6 +37,7 @@ function OwnList.new()
         cancelRequested = {}, ---@type table<number, boolean>
         expiredHints = {}, ---@type table<number, boolean>
         cancelWindowUntil = 0,
+        baselined = false,
     }, OwnList)
 end
 
@@ -110,7 +114,10 @@ function OwnList:ingest(records, now)
     end
     for signature, bucket in pairs(ledgerRows) do
         local accounted = self.ledgerSeen[signature] or 0
-        if bucket.count > accounted then
+        -- The first snapshot of a session baselines the ledger: the fork's
+        -- sale records survive reloads server-side, and replaying them as
+        -- alerts would re-notify every sale made before the session began.
+        if self.baselined and bucket.count > accounted then
             for _ = accounted + 1, bucket.count do
                 events[#events + 1] = {
                     type = "sale",
@@ -145,6 +152,7 @@ function OwnList:ingest(records, now)
             events[#events + 1] = { type = "closed", lot = lot, reason = reason }
         end
     end
+    self.baselined = true
     return events
 end
 

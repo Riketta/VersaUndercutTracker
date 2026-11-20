@@ -94,6 +94,7 @@ describe("domain ownlist", function()
 
     it("marks ledger rows born in the cancel window and suppresses their gold", function()
         local list = OwnList.new()
+        list:ingest({}, 50)
         local record = lot(42, 11, 1, { buyout = 10494 })
         list:openCancelWindow(100, 10)
         local events = list:ingest({ record }, 105)
@@ -104,11 +105,28 @@ describe("domain ownlist", function()
         assert.equals(0, #list:ingest({ record }, 300))
     end)
 
+    it("baselines the ledger on the first snapshot: no replay of old sales", function()
+        -- The fork's sale records survive reloads server-side; a fresh
+        -- session must account them silently instead of re-notifying.
+        local list = OwnList.new()
+        local record = lot(42, 11, 1, { buyout = 10494 })
+        local events = list:ingest({ record }, 100)
+        assert.equals(0, #events)
+        -- same rows again: still silent
+        assert.equals(0, #list:ingest({ record }, 200))
+        -- growth after the baseline is a sale
+        local grown = list:ingest({ record, copyOf(record) }, 300)
+        assert.equals(1, #grown)
+        assert.equals("sale", grown[1].type)
+        assert.is_false(grown[1].inCancelWindow)
+    end)
+
     it("counts identical-signature ledger rows as separate sales", function()
         -- Verified in game: one listing's repeat partial sales coexist as
         -- multiple rows with the SAME (auctionID, qty, gold) - signature
         -- GROWTH is the sale signal, not presence.
         local list = OwnList.new()
+        list:ingest({}, 50)
         local record = lot(178161993, 1, 1, { buyout = 11000 })
         local events = list:ingest({ record }, 100)
         assert.equals(1, #events)
