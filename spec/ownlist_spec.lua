@@ -2,6 +2,14 @@ local OwnList = require("VersaUndercutTracker.domain.ownlist")
 
 local KEY = "i:13935:55:0:0"
 
+local function copyOf(record)
+    local out = {}
+    for key, value in pairs(record) do
+        out[key] = value
+    end
+    return out
+end
+
 local function lot(auctionID, quantity, status, opts)
     opts = opts or {}
     return {
@@ -69,21 +77,54 @@ describe("domain ownlist", function()
         assert.equals("sold", events[1].reason)
     end)
 
-    it("emits sale ledger records once per signature", function()
+    it("classifies closures inside the cancel window as canceled without id match", function()
+        -- The fork's cancel payloads are NOT owned auctionIDs (verified:
+        -- garbage value 110), so attribution must not rely on the argument.
+        local list = OwnList.new()
+        list:ingest({ lot(7, 3, 0, { timeLeft = 7200 }) }, 100)
+        list:openCancelWindow(105, 10)
+        local events = list:ingest({}, 110)
+        assert.equals(1, #events)
+        assert.equals("canceled", events[1].reason)
+        -- after the window closes, disappearances are sales again
+        list:ingest({ lot(8, 1, 0, { timeLeft = 7200 }) }, 200)
+        local later = list:ingest({}, 300)
+        assert.equals("sold", later[1].reason)
+    end)
+
+    it("marks ledger rows born in the cancel window and suppresses their gold", function()
         local list = OwnList.new()
         local record = lot(42, 11, 1, { buyout = 10494 })
+        list:openCancelWindow(100, 10)
+        local events = list:ingest({ record }, 105)
+        assert.equals(1, #events)
+        assert.equals("sale", events[1].type)
+        assert.is_true(events[1].inCancelWindow)
+        -- accounted: not re-emitted later
+        assert.equals(0, #list:ingest({ record }, 300))
+    end)
+
+    it("counts identical-signature ledger rows as separate sales", function()
+        -- Verified in game: one listing's repeat partial sales coexist as
+        -- multiple rows with the SAME (auctionID, qty, gold) - signature
+        -- GROWTH is the sale signal, not presence.
+        local list = OwnList.new()
+        local record = lot(178161993, 1, 1, { buyout = 11000 })
         local events = list:ingest({ record }, 100)
         assert.equals(1, #events)
         assert.equals("sale", events[1].type)
-        assert.equals(11, events[1].quantity)
-        assert.equals(10494, events[1].gold)
+        assert.equals(1, events[1].quantity)
+        assert.equals(11000, events[1].gold)
         assert.equals(KEY, events[1].keyString)
-        -- same record again: silent
-        assert.equals(0, #list:ingest({ record }, 200))
-        -- a second, bigger sale on the same auctionID: a new event
-        local events2 = list:ingest({ lot(42, 14, 1, { buyout = 13356 }) }, 300)
-        assert.equals(1, #events2)
-        assert.equals(14, events2[1].quantity)
+        -- a different-signature sale on the same listing also emits
+        events = list:ingest({ record, lot(178161993, 2, 1, { buyout = 22000 }) }, 150)
+        assert.equals(1, #events)
+        assert.equals(2, events[1].quantity)
+        -- a second identical row appears: one more sale
+        events = list:ingest({ record, copyOf(record), lot(178161993, 2, 1, { buyout = 22000 }) }, 200)
+        assert.equals(1, #events)
+        -- same rows again: silent
+        assert.equals(0, #list:ingest({ record, copyOf(record), lot(178161993, 2, 1, { buyout = 22000 }) }, 300))
     end)
 
     it("aggregates per-key quantity vs baseline across lots", function()

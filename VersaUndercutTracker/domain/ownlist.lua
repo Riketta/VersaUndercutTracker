@@ -15,6 +15,9 @@ V.domain = V.domain or {}
 ---@field ledgerSeen table<string, boolean> auctionID:qty:gold signatures
 ---@field cancelRequested table<number, boolean>
 ---@field expiredHints table<number, boolean>
+---@field cancelWindowUntil number session-seconds stamp: closures and new
+---ledger rows inside the window are cancel-attributed (the fork's cancel
+---payloads are not owned auctionIDs - verified garbage value 110)
 local OwnList = {}
 OwnList.__index = OwnList
 
@@ -27,18 +30,29 @@ function OwnList.new()
     return setmetatable({
         active = {}, ---@type table<number, OwnLot> auctionID -> last active record
         baselines = {}, ---@type table<number, number> auctionID -> first-seen quantity
-        ledgerSeen = {}, ---@type table<string, boolean> auctionID:qty:gold signatures
+        ledgerSeen = {}, ---@type table<string, number> signature -> rows accounted
         cancelRequested = {}, ---@type table<number, boolean>
         expiredHints = {}, ---@type table<number, boolean>
+        cancelWindowUntil = 0,
     }, OwnList)
 end
 
 --- The user (or a future cancel port) requested cancellation of this auction.
+--- The argument may NOT be an owned auctionID on this fork (the cancel wire
+--- payloads are garbage) - openCancelWindow is the robust attribution.
 ---@param auctionID number
 function OwnList:markCancelRequested(auctionID)
     if type(auctionID) == "number" then
         self.cancelRequested[auctionID] = true
     end
+end
+
+--- Opens the cancel-attribution window: closures and NEW ledger rows landing
+--- inside it classify as user cancels, whatever ids the wire carried.
+---@param now number session clock seconds
+---@param seconds number window length
+function OwnList:openCancelWindow(now, seconds)
+    self.cancelWindowUntil = math.max(self.cancelWindowUntil, now + seconds)
 end
 
 --- AUCTION_HOUSE_AUCTIONS_EXPIRED hint (payload is the real auctionID here).
@@ -61,6 +75,11 @@ end
 function OwnList:ingest(records, now)
     local events = {}
     local seenActive = {}
+    local inCancelWindow = now <= self.cancelWindowUntil
+    -- Ledger rows are counted per signature: identical (auctionID, qty, gold)
+    -- rows coexist for repeat partial sales of one listing (verified in
+    -- game), so signature GROWTH - not mere presence - is the sale signal.
+    local ledgerRows = {}
     for _, rec in ipairs(records) do
         if rec.status == 0 then
             seenActive[rec.auctionID] = true
@@ -81,24 +100,36 @@ function OwnList:ingest(records, now)
         else
             local gold = rec.buyoutRaw
             local signature = table.concat({ rec.auctionID, rec.quantity, gold or -1 }, ":")
-            if not self.ledgerSeen[signature] then
-                self.ledgerSeen[signature] = true
+            local bucket = ledgerRows[signature]
+            if bucket then
+                bucket.count = bucket.count + 1
+            else
+                ledgerRows[signature] = { count = 1, record = rec }
+            end
+        end
+    end
+    for signature, bucket in pairs(ledgerRows) do
+        local accounted = self.ledgerSeen[signature] or 0
+        if bucket.count > accounted then
+            for _ = accounted + 1, bucket.count do
                 events[#events + 1] = {
                     type = "sale",
-                    auctionID = rec.auctionID,
-                    keyString = rec.keyString,
-                    itemID = rec.itemID,
-                    quantity = rec.quantity,
-                    gold = gold,
+                    auctionID = bucket.record.auctionID,
+                    keyString = bucket.record.keyString,
+                    itemID = bucket.record.itemID,
+                    quantity = bucket.record.quantity,
+                    gold = bucket.record.buyoutRaw,
+                    inCancelWindow = inCancelWindow,
                 }
             end
         end
+        self.ledgerSeen[signature] = bucket.count
     end
     for auctionID, lot in pairs(self.active) do
         if not seenActive[auctionID] then
             self.active[auctionID] = nil
             local reason = "sold"
-            if self.cancelRequested[auctionID] then
+            if self.cancelRequested[auctionID] or inCancelWindow then
                 reason = "canceled"
             elseif self.expiredHints[auctionID] then
                 reason = "expired"

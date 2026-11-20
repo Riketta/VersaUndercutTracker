@@ -186,6 +186,35 @@ describe("domain core", function()
         assert.is_false(notify.dispatched[1].routing.chat)
     end)
 
+    it("cancel window quiets unmatched-id cancels: no sold, no noactive", function()
+        -- The wire cancel argument is garbage on this fork (verified: 110);
+        -- only the window attributes the closure.
+        core:onAhOpen()
+        owned.records = { ownedRecord(178364562, 60, 0) }
+        core:onOwnedUpdated()
+        clock.t = clock.t + 30
+        core:markCancelRequested(110)
+        clock.t = clock.t + 2
+        owned.records = {}
+        core:onOwnedUpdated()
+        assert.equals(1, #notify.dispatched)
+        assert.equals("canceled", notify.dispatched[1].kind)
+    end)
+
+    it("ledger rows born in the cancel window never alert as sold", function()
+        core:onAhOpen()
+        owned.records = { ownedRecord(178364562, 60, 0) }
+        core:onOwnedUpdated()
+        clock.t = clock.t + 30
+        core:markCancelRequested(110)
+        clock.t = clock.t + 2
+        -- canceled lot leaves a status record + vanishes from actives
+        owned.records = { ownedRecord(178364562, 60, 1, { buyout = 57240 }) }
+        core:onOwnedUpdated()
+        assert.equals(1, #notify.dispatched)
+        assert.equals("canceled", notify.dispatched[1].kind)
+    end)
+
     it("skips channel beats during throttle backoff, resumes after", function()
         core:onAhOpen()
         owned.records = { ownedRecord(178364562, 60, 0) }

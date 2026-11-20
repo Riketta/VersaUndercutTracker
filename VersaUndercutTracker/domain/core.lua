@@ -155,13 +155,18 @@ function Core:onOwnedUpdated()
         local lot = event.lot
         if event.type == "sale" then
             self.keyItemIDs[event.keyString] = event.itemID
-            self:dispatch(
-                "sold",
-                event.keyString,
-                { quantity = event.quantity, gold = event.gold },
-                self:itemLabel(event.itemID),
-                tostring(event.quantity)
-            )
+            -- Ledger rows born inside the cancel window belong to the canceled
+            -- lot (the fork leaves status records for cancels too) - account
+            -- them silently; only out-of-window rows are sale alerts.
+            if not event.inCancelWindow then
+                self:dispatch(
+                    "sold",
+                    event.keyString,
+                    { quantity = event.quantity, gold = event.gold },
+                    self:itemLabel(event.itemID),
+                    tostring(event.quantity)
+                )
+            end
         elseif event.type == "partial" then
             self.keyItemIDs[lot.keyString] = lot.itemID
             self:dispatch(
@@ -358,6 +363,9 @@ end
 
 function Core:markCancelRequested(auctionID)
     self.ownlist:markCancelRequested(auctionID)
+    -- The wire argument is not a reliable owned auctionID on this fork - the
+    -- window is the primary attribution; the id is a bonus when it matches.
+    self.ownlist:openCancelWindow(self.clock:now(), 10)
 end
 
 function Core:onExpiredHint(auctionID)
@@ -366,6 +374,7 @@ function Core:onExpiredHint(auctionID)
 end
 
 function Core:onCanceledHint()
+    self.ownlist:openCancelWindow(self.clock:now(), 10)
     self.ownedPort:refresh()
 end
 

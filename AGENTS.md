@@ -28,11 +28,16 @@ AuctiMogger's fork evidence on the same build):
    Item `SendSearchQuery`/`QueryItem` are REFUSED (empty result sets).
    Blizzard-handler clicks (`button:Click()`) answer for items.
 5. **Event quirks**: `AUCTION_CANCELED`'s payload is NOT an auctionID
-   (garbage value observed); `AUCTION_HOUSE_AUCTION_CREATED` did not fire on
+   (garbage value observed); the `CancelAuction` post-hook argument is
+   equally untrustworthy; `AUCTION_HOUSE_AUCTION_CREATED` did not fire on
    a commodity post; `AUCTION_HOUSE_THROTTLED_MESSAGE_DROPPED` fires around
    UI actions too. Consequence: the owned-snapshot DIFF is the lifecycle
-   source of truth; events are hints only. User cancels are attributed via a
-   `hooksecurefunc(C_AuctionHouse, "CancelAuction")` post-hook.
+   source of truth; events are hints only. Cancels are attributed by a
+   TIME WINDOW (closures and new ledger rows within ~10s of a cancel
+   request classify as canceled, and in-window ledger rows never alert as
+   sold) - id matching is only a bonus. Ledger dedup counts SIGNATURE
+   OCCURRENCES: identical (auctionID, qty, gold) rows coexist for repeat
+   partial sales of one listing; growth, not presence, is the sale signal.
 6. **Browse full read** (empty `SendBrowseQuery`) works from script but paging
    stalled at page 1 in our probe; the channel is NOT used. Favorites are
    untouched by policy.
