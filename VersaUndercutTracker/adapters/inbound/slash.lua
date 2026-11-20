@@ -109,7 +109,7 @@ function Slash.register(console)
                 reply((select(2, console:test(a))))
             end
         else
-            reply("unknown command: " .. cmd .. " (try /versa help)")
+            reply("unknown command: " .. cmd .. " (try /vut help)")
         end
     end
 end

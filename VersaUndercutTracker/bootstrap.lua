@@ -49,7 +49,7 @@ local function build()
     V.adapters.SlashAdapter.register(console)
     V.api = console
 
-    print("|cff33ccffVUT|r 0.1.0 loaded - /versa help")
+    print("|cff33ccffVUT|r 0.1.0 loaded - /vut help")
 end
 
 local loader = CreateFrame("Frame")
