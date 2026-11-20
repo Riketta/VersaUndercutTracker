@@ -1,0 +1,7 @@
+# vendored toolchain (pinned binaries downloaded by scripts/bootstrap-tools.sh)
+tools/
+
+# local gate logs
+lls.log
+*.log
+.luacheckcache

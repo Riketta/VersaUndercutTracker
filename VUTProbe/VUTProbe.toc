@@ -1,0 +1,6 @@
+## Interface: 16001, 120100
+## Title: VUTProbe
+## Notes: Raw auction house payload dump probe for VUT (VersaUndercutTracker) development.
+## Author: Riketta
+## Version: 0.1.0
+VUTProbe.lua

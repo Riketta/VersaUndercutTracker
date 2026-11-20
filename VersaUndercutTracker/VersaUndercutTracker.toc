@@ -1,0 +1,39 @@
+## Interface: 16001, 120100
+## Title: VUT
+## Notes: Own-auction queue tracker: undercut/tied/sold-out alerts with chat, sound, flash and toast channels.
+## Author: Riketta
+## Version: 0.1.0
+## SavedVariables: VUTDB
+
+# Domain (pure Lua, no game API - CI-enforced)
+domain/types.lua
+domain/config.lua
+domain/ownlist.lua
+domain/queue.lua
+domain/alerts.lua
+domain/core.lua
+
+# Ports (contract annotations only)
+ports/inbound.lua
+ports/outbound.lua
+
+# Outbound adapters
+adapters/outbound/clock.lua
+adapters/outbound/item_info.lua
+adapters/outbound/ah_owned.lua
+adapters/outbound/ah_market.lua
+adapters/outbound/notify_bus.lua
+adapters/outbound/notify_chat.lua
+adapters/outbound/notify_sound.lua
+adapters/outbound/notify_flash.lua
+adapters/outbound/notify_toast.lua
+adapters/outbound/savedvars.lua
+
+# Inbound adapters
+adapters/inbound/events.lua
+adapters/inbound/timer.lua
+adapters/inbound/console.lua
+adapters/inbound/slash.lua
+
+# Composition root (must be last)
+bootstrap.lua

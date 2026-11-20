@@ -1,0 +1,32 @@
+{
+	"runtime.version": "Lua 5.1",
+	"workspace.checkThirdParty": false,
+	"workspace.ignore": [
+		"tools/**"
+	],
+	"diagnostics.globals": [
+		"VUT",
+		"VUTDB",
+		"VUTProbe",
+		"AuctionHouseFrame",
+		"C_AuctionHouse",
+		"C_Item",
+		"C_Timer",
+		"CreateFrame",
+		"Enum",
+		"GetTime",
+		"hooksecurefunc",
+		"PlaySound",
+		"PlaySoundFile",
+		"SOUNDKIT",
+		"UIParent",
+		"time",
+		"SLASH_VUT1",
+		"SLASH_VUTPROBE1",
+		"SLASH_VUTPROBE2",
+		"SlashCmdList"
+	],
+	"diagnostics.severity": {
+		"unused-local": "Warning"
+	}
+}

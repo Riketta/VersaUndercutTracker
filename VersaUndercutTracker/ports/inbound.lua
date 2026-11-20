@@ -1,0 +1,33 @@
+---@meta
+-- VUT - inbound (driving) ports. The core is driven through
+-- these contracts by adapters/inbound; implementations are wired in
+-- bootstrap.lua. Documentation only: no runtime code, but the TOC lists the
+-- file so the annotations load in game for tooling parity with CI.
+
+---@class AlertEvent one dispatched alert
+---@field kind string one of Config.KINDS
+---@field severity string "alert"|"warn"|"info"
+---@field text string pre-formatted human message (domain owns wording)
+---@field routing table<string, boolean> channel name -> enabled
+
+--- The core's driving surface. Any number of adapters may drive it over the
+--- same contract (events, slash, console API, a future GUI).
+---@class ControlPort
+---@field onAhOpen fun(self: any)
+---@field onAhClose fun(self: any)
+---@field onThrottleDrop fun(self: any)
+---@field beatOwned fun(self: any) owned-list refresh beat
+---@field beatCommodities fun(self: any) commodity rotation beat
+---@field beatItems fun(self: any) item channel beat
+---@field onOwnedUpdated fun(self: any) OWNED_AUCTIONS_UPDATED landed
+---@field onCommodityRows fun(self: any, itemID: number) COMMODITY_SEARCH_RESULTS_UPDATED landed
+---@field onItemRows fun(self: any, itemKey: table) ITEM_SEARCH_RESULTS_UPDATED landed
+---@field markCancelRequested fun(self: any, auctionID: number) cancel observed for this auction
+---@field onExpiredHint fun(self: any, auctionID: number) AUCTION_HOUSE_AUCTIONS_EXPIRED
+---@field onCanceledHint fun(self: any) AUCTION_CANCELED (payload is not an auctionID on this fork)
+---@field onCommodityPurchased fun(self: any, itemID: number, quantity: number) COMMODITY_PURCHASED
+---@field pause fun(self: any)
+---@field resume fun(self: any)
+---@field scanNow fun(self: any)
+---@field testAlert fun(self: any, kind: string)
+---@field status fun(self: any): table
