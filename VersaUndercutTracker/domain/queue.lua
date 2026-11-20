@@ -59,10 +59,14 @@ function Queue.commodity(rows)
 end
 
 --- Item verdict for one owned item key.
---- States: "FIRST" (own listing is the unique cheapest), "TIED" (own unit
---- price ties the cheapest with foreign listings), "UNDERCUT", "GONE".
----@param rows ItemRow[] sanitized rows
----@return table verdict {state: string, cheapest?: number, ownMin?: number, by?: number, cheaperCount?: number, tiedCount?: number}
+--- States: "FIRST" (own listing is the unique cheapest, or sits at the TOP of
+--- the cheapest tier in display order), "TIED" (own unit price ties the
+--- cheapest and foreign listings at that price display above own), "UNDERCUT",
+--- "GONE". Items have no server-side match queue - buyers pick a listing - so
+--- position uses the DELIVERED row order (the same order the UI displays;
+--- buyers practically buy top-down).
+---@param rows ItemRow[] sanitized rows in delivered (display) order
+---@return table verdict {state: string, cheapest?: number, ownMin?: number, by?: number, cheaperCount?: number, tiedCount?: number, rowsAhead?: number, unitsAhead?: number}
 function Queue.item(rows)
     if type(rows) ~= "table" or #rows == 0 then
         return { state = "GONE" }
@@ -104,8 +108,33 @@ function Queue.item(rows)
             tiedCount = tiedCount + 1
         end
     end
-    if tiedCount > 0 then
-        return { state = "TIED", cheapest = cheapest, ownMin = ownMin, tiedCount = tiedCount }
+    -- Position inside the tied tier: the first own-min row's delivered index.
+    -- Only equal-price foreign rows above it count - the display order is not
+    -- guaranteed sorted, so higher-priced rows above own are not competition.
+    local firstOwnIdx = nil
+    for i, row in ipairs(rows) do
+        if row.isOwn and row.unitPrice == ownMin then
+            firstOwnIdx = i
+            break
+        end
+    end
+    local rowsAhead, unitsAhead = 0, 0
+    for i = 1, (firstOwnIdx or 1) - 1 do
+        local row = rows[i]
+        if not row.isOwn and row.unitPrice == ownMin then
+            rowsAhead = rowsAhead + 1
+            unitsAhead = unitsAhead + row.quantity
+        end
+    end
+    if tiedCount > 0 and rowsAhead > 0 then
+        return {
+            state = "TIED",
+            cheapest = cheapest,
+            ownMin = ownMin,
+            tiedCount = tiedCount,
+            rowsAhead = rowsAhead,
+            unitsAhead = unitsAhead,
+        }
     end
     return { state = "FIRST", cheapest = cheapest, ownMin = ownMin }
 end

@@ -39,6 +39,14 @@ function Alerts.text(kind, name, facts)
             Types.money(facts.ownMin or 0)
         )
     elseif kind == "tied" then
+        if facts.rowsAhead ~= nil then
+            -- item listings: one buyer takes one whole listing
+            return ("%s tied at market min %s - %d listings sell before yours"):format(
+                name,
+                Types.money(facts.ownMin or 0),
+                facts.rowsAhead
+            )
+        end
         return ("%s tied at market min %s - %d units sell before yours"):format(
             name,
             Types.money(facts.ownMin or 0),

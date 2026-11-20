@@ -25,6 +25,11 @@ describe("domain alerts", function()
             "[Herb] tied at market min 9s 54c - 61 units sell before yours",
             Alerts.text("tied", "Herb", { ownMin = 954, unitsAhead = 61 })
         )
+        -- item listings count rows, not units (one buyer takes one listing)
+        assert.equals(
+            "[Bracers] tied at market min 6g 33s - 2 listings sell before yours",
+            Alerts.text("tied", "Bracers", { ownMin = 63300, rowsAhead = 2, unitsAhead = 2 })
+        )
         assert.equals("[Herb] sold 11 for 1g 4s 94c", Alerts.text("sold", "Herb", { quantity = 11, gold = 10494 }))
         assert.equals("[Herb] sold 11", Alerts.text("sold", "Herb", { quantity = 11 }))
         assert.equals("[Herb] expired - relist?", Alerts.text("expired", "Herb", {}))

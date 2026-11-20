@@ -367,7 +367,11 @@ function Core:applyVerdict(keyString, itemID, verdict)
             nil
         )
     elseif verdict.state == "TIED" then
-        self:dispatch("tied", keyString, { unitsAhead = verdict.unitsAhead, ownMin = verdict.ownMin }, label, nil)
+        self:dispatch("tied", keyString, {
+            unitsAhead = verdict.unitsAhead,
+            rowsAhead = verdict.rowsAhead,
+            ownMin = verdict.ownMin,
+        }, label, nil)
     elseif verdict.state == "FIRST" and prev and (prev.state == "UNDERCUT" or prev.state == "TIED") then
         self:dispatch("recovered", keyString, {}, label, nil)
     end
