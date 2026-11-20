@@ -8,6 +8,7 @@ _G.VUT = V
 V.adapters = V.adapters or {}
 
 local EVENTS = {
+    "PLAYER_LOGIN",
     "AUCTION_HOUSE_SHOW",
     "AUCTION_HOUSE_CLOSED",
     "OWNED_AUCTIONS_UPDATED",
@@ -53,7 +54,9 @@ end
 
 function Events:dispatch(event, ...)
     local core = self.core
-    if event == "AUCTION_HOUSE_SHOW" then
+    if event == "PLAYER_LOGIN" then
+        core:onStartup()
+    elseif event == "AUCTION_HOUSE_SHOW" then
         core:onAhOpen()
         self.driver:start(core, self.settings)
     elseif event == "AUCTION_HOUSE_CLOSED" then

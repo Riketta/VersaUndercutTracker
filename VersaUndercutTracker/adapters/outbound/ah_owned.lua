@@ -21,6 +21,18 @@ function Owned.new(itemInfo)
     return setmetatable({ itemInfo = itemInfo }, Owned)
 end
 
+--- Whether the client holds the COMPLETE owned row set. OWNED_AUCTIONS_UPDATED
+--- can fire mid-stream while rows are still landing; a baseline taken from a
+--- partial set would replay late-arriving pre-session ledger rows as sales.
+---@return boolean
+function Owned:hasFull()
+    if not (C_AuctionHouse and C_AuctionHouse.HasFullOwnedAuctionResults) then
+        return false
+    end
+    local ok, full = pcall(C_AuctionHouse.HasFullOwnedAuctionResults)
+    return ok and full == true
+end
+
 --- Fire the requery. Rows land asynchronously via OWNED_AUCTIONS_UPDATED
 --- (the events adapter forwards it; the core then calls read()).
 ---@return boolean true when the send itself did not throw

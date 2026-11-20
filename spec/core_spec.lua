@@ -56,8 +56,12 @@ describe("domain core", function()
         owned = {
             refreshes = 0,
             records = {},
+            full = true,
             refresh = function(self)
                 self.refreshes = self.refreshes + 1
+            end,
+            hasFull = function(self)
+                return self.full
             end,
             read = function(self)
                 return self.records
@@ -235,6 +239,33 @@ describe("domain core", function()
         core:onOwnedUpdated()
         assert.equals(1, #notify.dispatched)
         assert.equals("canceled", notify.dispatched[1].kind)
+    end)
+
+    it("ignores partial owned snapshots; the first FULL snapshot baselines", function()
+        -- reload + open AH: the first OWNED_AUCTIONS_UPDATED can fire while
+        -- rows are still streaming; only a complete set may be ingested.
+        core:onAhOpen()
+        owned.full = false
+        owned.records = { ownedRecord(178305292, 4, 1, { buyout = 44000 }) }
+        core:onOwnedUpdated()
+        assert.equals(0, #notify.dispatched)
+        assert.is_false(core.ownlist.baselined)
+        -- the same rows arrive again once the set is complete: silent baseline
+        owned.full = true
+        core:onOwnedUpdated()
+        assert.equals(0, #notify.dispatched)
+        assert.is_true(core.ownlist.baselined)
+        -- growth after the full baseline is still a sale
+        clock.t = clock.t + 30
+        table.insert(owned.records, copyOf(owned.records[1]))
+        core:onOwnedUpdated()
+        assert.equals(1, #notify.dispatched)
+        assert.equals("sold", notify.dispatched[1].kind)
+    end)
+
+    it("onStartup fires the early owned refresh before the AH opens", function()
+        core:onStartup()
+        assert.equals(1, owned.refreshes)
     end)
 
     it("skips channel beats during throttle backoff, resumes after", function()

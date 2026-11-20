@@ -114,6 +114,15 @@ end
 
 -- ===== session (driven by the events adapter) =================================
 
+--- PLAYER_LOGIN: fire the owned query once, early, so the session baseline
+--- settles BEFORE the auction house opens - sales landing between login and
+--- the first AH visit then diff against a complete baseline instead of racing
+--- the AH-open update stream. If the pre-AH query is refused, the AH-open
+--- refresh is the fallback baseline moment.
+function Core:onStartup()
+    self.ownedPort:refresh()
+end
+
 function Core:onAhOpen()
     self.sessionOpen = true
     self.itemProbe = { state = "unknown", at = 0, itemID = nil }
@@ -139,7 +148,12 @@ function Core:beatOwned()
 end
 
 --- OWNED_AUCTIONS_UPDATED landed: read + diff + evaluate aggregates.
+--- Partial snapshots are never ingested: the ledger baseline is only valid
+--- when complete, or late-arriving pre-session rows replay as sold alerts.
 function Core:onOwnedUpdated()
+    if not self.ownedPort:hasFull() then
+        return
+    end
     local now = self.clock:now()
     local records = self.ownedPort:read()
     -- Seed exact display names from the records' own item links first - free,
@@ -438,6 +452,7 @@ function Core:status()
     return {
         session = self.sessionOpen,
         paused = self.paused,
+        ownedBaseline = self.ownlist.baselined,
         activeLots = #self.ownlist:activeLots(),
         activeKeys = activeKeys,
         verdicts = verdictStates,

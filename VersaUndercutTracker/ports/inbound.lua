@@ -13,6 +13,7 @@
 --- The core's driving surface. Any number of adapters may drive it over the
 --- same contract (events, slash, console API, a future GUI).
 ---@class ControlPort
+---@field onStartup fun(self: any) PLAYER_LOGIN: early owned query so the baseline settles pre-AH
 ---@field onAhOpen fun(self: any)
 ---@field onAhClose fun(self: any)
 ---@field onThrottleDrop fun(self: any)

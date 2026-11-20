@@ -38,9 +38,10 @@ end
 local function status(console)
     local s = console:status()
     reply(
-        ("session=%s paused=%s lots=%d keys=%d"):format(
+        ("session=%s paused=%s baseline=%s lots=%d keys=%d"):format(
             tostring(s.session),
             tostring(s.paused),
+            tostring(s.ownedBaseline),
             s.activeLots,
             s.activeKeys
         )

@@ -7,9 +7,12 @@
 --- Own-auction reads and refreshes. Script-side QueryOwnedAuctions passes the
 --- fork's gate (verified: ~0.1s answer), so the owned channel needs no UI
 --- involvement. read() returns SANITIZED OwnLot records - the adapter owns
---- commodity-ness resolution and boundary validation.
+--- commodity-ness resolution and boundary validation. Partial snapshots must
+--- never be ingested: the session ledger baseline is only valid when taken
+--- from a complete row set.
 ---@class OwnedAuctionsPort
 ---@field refresh fun(self: any): boolean fire QueryOwnedAuctions; rows land via OWNED_AUCTIONS_UPDATED
+---@field hasFull fun(self: any): boolean true once the client holds the COMPLETE owned row set
 ---@field read fun(self: any): OwnLot[] sanitized active + ledger records
 
 --- Market competitor reads. Commodity queries pass the fork's gate from
