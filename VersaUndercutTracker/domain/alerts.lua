@@ -23,12 +23,14 @@ Alerts.SEVERITY = {
     recovered = "info",
 }
 
---- Builds the human message for one alert.
+--- Builds the human message for one alert. The item name is wrapped in
+--- brackets per the game's item convention ([Rugged Leather], [#13935]).
 ---@param kind string one of Config.KINDS
 ---@param name string item display name or "#itemID" fallback
 ---@param facts table kind-specific fields
 ---@return string
 function Alerts.text(kind, name, facts)
+    name = "[" .. tostring(name) .. "]"
     if kind == "undercut" then
         return ("%s undercut by %s (market %s, yours %s)"):format(
             name,
