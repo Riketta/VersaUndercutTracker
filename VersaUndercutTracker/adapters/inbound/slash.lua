@@ -99,7 +99,9 @@ function Slash.register(console)
                 reply((select(2, console:setCooldown(a, seconds))))
             end
         elseif cmd == "channel" then
-            local kind, channel = a:match("^(%S+).(%S+)$")
+            -- %. is a LITERAL dot: kind and channel split on it (a bare . is a
+            -- wildcard and parsed "tied.sound" as kind "tied.sou", channel "d")
+            local kind, channel = a:match("^(%S+)%.(%S+)$")
             if kind and channel and (b == "on" or b == "off") then
                 reply((select(2, console:setChannel(kind, channel, b == "on"))))
             else
