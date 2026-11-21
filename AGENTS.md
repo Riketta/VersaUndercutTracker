@@ -139,5 +139,7 @@ bash scripts/ci_local.sh          # stylua --check, tests, TOC, LLS
   every settings write goes through `Config.coerce` on a candidate copy,
   mutates the shared table in place, persists, then restarts timers.
 - Alert kinds: undercut, tied, sold, expired, canceled, lowqty, noactive,
-  recovered. Market alerts are transition-only (enter/leave bad state, never
-  per-poll spam); sold alerts dedup closure-vs-ledger by quantity tag.
+  recovered. Market alerts are transition-only plus worsening (a deeper
+  undercut or more units/listings ahead of an existing tie re-alerts,
+  cooldown-gated; improvements stay quiet); sold alerts dedup closure-vs-ledger
+  by quantity tag.

@@ -348,16 +348,35 @@ function Core:onItemRows(itemKey)
     self:applyVerdict(keyString, itemKey.itemID, Queue.item(rows))
 end
 
---- Verdict state machine: alerts fire on transitions only.
+--- Verdict state machine: alerts fire on transitions, and on WORSENING while
+--- a bad state holds (someone else jumped ahead of an existing tie, or the
+--- undercut deepened) - a steady TIED must not go silent as more sellers pile
+--- in front. Improvements stay quiet; full recovery fires its own alert.
+--- Cooldowns still gate repeats.
 function Core:applyVerdict(keyString, itemID, verdict)
     local now = self.clock:now()
     local prev = self.verdicts[keyString]
     verdict.at = now
     self.verdicts[keyString] = verdict
+    local label = self:itemLabel(itemID)
     if prev and prev.state == verdict.state then
+        if verdict.state == "TIED" and (verdict.unitsAhead or 0) > (prev.unitsAhead or 0) then
+            self:dispatch("tied", keyString, {
+                unitsAhead = verdict.unitsAhead,
+                rowsAhead = verdict.rowsAhead,
+                ownMin = verdict.ownMin,
+            }, label, nil)
+        elseif verdict.state == "UNDERCUT" and (verdict.by or 0) > (prev.by or 0) then
+            self:dispatch(
+                "undercut",
+                keyString,
+                { by = verdict.by, cheapest = verdict.cheapest, ownMin = verdict.ownMin },
+                label,
+                nil
+            )
+        end
         return
     end
-    local label = self:itemLabel(itemID)
     if verdict.state == "UNDERCUT" then
         self:dispatch(
             "undercut",

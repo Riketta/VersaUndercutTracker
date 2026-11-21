@@ -26,18 +26,21 @@ end
 
 local function ownedRecord(auctionID, quantity, status, opts)
     opts = opts or {}
+    local itemID = opts.itemID or 13935
+    local itemLevel = opts.itemLevel or 55
+    local itemSuffix = opts.itemSuffix or 0
     return {
         auctionID = auctionID,
-        keyString = "i:13935:55:0:0",
-        itemID = 13935,
-        itemLevel = 55,
-        itemSuffix = 0,
+        keyString = ("i:%d:%d:%d:0"):format(itemID, itemLevel, itemSuffix),
+        itemID = itemID,
+        itemLevel = itemLevel,
+        itemSuffix = itemSuffix,
         battlePetSpeciesID = 0,
         quantity = quantity,
         status = status,
         buyoutRaw = opts.buyout,
         unitPrice = opts.unit or 954,
-        isCommodity = true,
+        isCommodity = opts.commodity ~= false,
         timeLeftSeconds = opts.timeLeft or 7200,
         itemLink = nil,
     }
@@ -79,8 +82,8 @@ describe("domain core", function()
             refreshItem = function()
                 return true
             end,
-            readItemRows = function()
-                return {}
+            readItemRows = function(self, itemKey)
+                return self.itemRowsByItemID and self.itemRowsByItemID[itemKey.itemID] or {}
             end,
             supportsItemClick = function()
                 return false
@@ -266,6 +269,68 @@ describe("domain core", function()
     it("onStartup fires the early owned refresh before the AH opens", function()
         core:onStartup()
         assert.equals(1, owned.refreshes)
+    end)
+
+    it("re-alerts when the tie deepens, not when it eases", function()
+        core:onAhOpen()
+        owned.records = { ownedRecord(178364562, 60, 0) }
+        core:onOwnedUpdated()
+        market.rowsByItem = { [13935] = { makeRow(954, 3), makeRow(954, 60, 60) } }
+        core:onCommodityRows(13935)
+        assert.equals(1, #notify.dispatched)
+        assert.equals("tied", notify.dispatched[1].kind)
+        -- more units jump ahead of the existing tie: re-alert (cooldown passed)
+        clock.t = clock.t + 301
+        market.rowsByItem = { [13935] = { makeRow(954, 61), makeRow(954, 60, 60) } }
+        core:onCommodityRows(13935)
+        assert.equals(2, #notify.dispatched)
+        assert.equals("tied", notify.dispatched[2].kind)
+        assert.is_true(notify.dispatched[2].text:find("61 units sell before yours") ~= nil)
+        -- the tie eases or holds: quiet
+        clock.t = clock.t + 301
+        market.rowsByItem = { [13935] = { makeRow(954, 30), makeRow(954, 60, 60) } }
+        core:onCommodityRows(13935)
+        clock.t = clock.t + 301
+        core:onCommodityRows(13935)
+        assert.equals(2, #notify.dispatched)
+    end)
+
+    it("re-alerts when the undercut deepens", function()
+        core:onAhOpen()
+        owned.records = { ownedRecord(178364562, 60, 0) }
+        core:onOwnedUpdated()
+        market.rowsByItem = { [13935] = { makeRow(950, 100), makeRow(954, 60, 60) } }
+        core:onCommodityRows(13935)
+        assert.equals(1, #notify.dispatched)
+        assert.equals("undercut", notify.dispatched[1].kind)
+        clock.t = clock.t + 121
+        market.rowsByItem = { [13935] = { makeRow(900, 100), makeRow(954, 60, 60) } }
+        core:onCommodityRows(13935)
+        assert.equals(2, #notify.dispatched)
+        assert.equals("undercut", notify.dispatched[2].kind)
+    end)
+
+    it("re-alerts when more item listings tie ahead of own", function()
+        core:onAhOpen()
+        owned.records = {
+            ownedRecord(178228136, 1, 0, { itemID = 10123, itemLevel = 57, itemSuffix = 14327, commodity = false }),
+        }
+        core:onOwnedUpdated()
+        local key = { itemID = 10123, itemLevel = 57, itemSuffix = 14327, battlePetSpeciesID = 0 }
+        local function irow(unit, own)
+            return { auctionID = unit, unitPrice = unit, buyoutTotal = unit, quantity = 1, isOwn = own == true }
+        end
+        market.itemRowsByItemID = { [10123] = { irow(17700), irow(17700, true) } }
+        core:onItemRows(key)
+        assert.equals(1, #notify.dispatched)
+        assert.equals("tied", notify.dispatched[1].kind)
+        assert.is_true(notify.dispatched[1].text:find("1 listings sell before yours") ~= nil)
+        -- a second seller ties ahead of own: re-alert past the tied cooldown
+        clock.t = clock.t + 301
+        market.itemRowsByItemID = { [10123] = { irow(17700), irow(17700), irow(17700, true) } }
+        core:onItemRows(key)
+        assert.equals(2, #notify.dispatched)
+        assert.is_true(notify.dispatched[2].text:find("2 listings sell before yours") ~= nil)
     end)
 
     it("skips channel beats during throttle backoff, resumes after", function()
