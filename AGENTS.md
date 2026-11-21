@@ -15,8 +15,16 @@ AuctiMogger's fork evidence on the same build):
 2. **Commodity match order**: `unitPrice` ASC, and within a price tier the
    NEWEST listing sells first ("last placed sells first" - the delivered row
    order IS the buy order; no reversal). This is the cancel/repost-
-   jump-the-queue behavior. Rows merge multiple owners (own units ride inside
-   via `numOwnerItems`), so positions are row-granular.
+   jump-the-queue behavior. Row shape depends on the query's
+   `separateOwnerItems` flag (3rd arg of SendSearchQuery): `false` MERGES
+   same-price owners into tier rows (own units ride inside via
+   `numOwnerItems` - the UI "grouped" first-click view of cached results);
+   `true` (what the Auctions tab sends - AuctionsItems/AuctionsCommodities
+   contexts) returns per-listing rows with the own listing separate at its
+   queue position (the UI "detailed" second-click view; observed in game:
+   first click refreshes the cached shape in place via HasSearchResults ->
+   RefreshItemSearchResults, second click re-queries). VUT queries with
+   `true`; positions are row-granular in that shape.
 3. **Owned list** (`GetOwnedAuctionInfo`): `status 0=Active, 1=Sold`; the
    status-1 rows are a per-sale LEDGER (qty + gold; `buyoutAmount = qty x
    unit price` there), can repeat an auctionID, and vanish eventually.
@@ -55,7 +63,8 @@ AuctiMogger's fork evidence on the same build):
    ITEM_KEY_ITEM_INFO_RECEIVED (unpaced re-probes are a request flood).
    Own ITEM lots carry the full hyperlink; commodity records do not.
 
-Still to verify in game: `RefreshItemSearchResults` from script for held keys
+Still to verify in game: `separateOwnerItems=true` commodity queries from
+script still pass the gate and return the separated shape; `RefreshItemSearchResults` from script for held keys
 (the core probes it once per session - `/vut probe` re-runs); stacked ITEM
 lot `buyoutAmount` total-vs-unit; `COMMODITY_PURCHASED` seller-side payload
 (the ledger already covers sales).

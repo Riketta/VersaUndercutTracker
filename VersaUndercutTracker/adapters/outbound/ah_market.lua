@@ -32,14 +32,21 @@ local function bareKey(itemID)
     return { itemID = itemID, itemLevel = 0, itemSuffix = 0, battlePetSpeciesID = 0 }
 end
 
---- Fire one commodity search. Rows land via COMMODITY_SEARCH_RESULTS_UPDATED.
+--- Fire one commodity search. Rows land via COMMODITY_SEARCH_RESULTS_UPDATED
+--- (plus the payload-less RECEIVED). separateOwnerItems=true mirrors the
+--- Auctions tab's own queries (AuctionsCommodities context): the own listing
+--- returns as its OWN row at its queue position instead of merging into a
+--- same-price tier row. The merged shape (separate=false) is the "grouped"
+--- view the UI displays for cached results on a first click; the second
+--- click re-queries with true and shows per-listing rows - observed in game,
+--- matching Blizzard's QueryItem.
 ---@param itemID number
 ---@return boolean
 function Market:queryCommodity(itemID)
     if not (C_AuctionHouse and C_AuctionHouse.SendSearchQuery) then
         return false
     end
-    return (pcall(C_AuctionHouse.SendSearchQuery, bareKey(itemID), {}, false, 0, 0))
+    return (pcall(C_AuctionHouse.SendSearchQuery, bareKey(itemID), {}, true, 0, 0))
 end
 
 --- Read the held commodity rows (sanitized, delivered/match order preserved).
