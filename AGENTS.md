@@ -150,6 +150,11 @@ bash scripts/ci_local.sh          # stylua --check, tests, TOC, LLS
 - Session clock via `ClockPort:now()` (GetTime); baselines, cooldown stamps
   and verdicts are SESSION state by design - only settings persist
   (account-wide `VUTDB`, settings only, coerced on load).
+- Poll cadences: owned 3 s, commodity rotation 2 s (clamps 2..120 / 1..300).
+  Rotation cost is 60/beat searches per minute TOTAL (constant in item
+  count; per-item latency = beat x owned items) against the 100/min cap
+  shared with the UI and co-resident addons; the throttle-drop backoff is
+  the safety valve.
 - The `/run VUT.*` machine API and `/vut` slash share the console adapter;
   every settings write goes through `Config.coerce` on a candidate copy,
   mutates the shared table in place, persists, then restarts timers.

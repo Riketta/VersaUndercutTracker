@@ -76,10 +76,10 @@ function Config.defaults()
         cooldowns[kind] = DEFAULT_COOLDOWNS[kind]
     end
     ---@class Settings
-    ---@field ownedPollSeconds number owned-list refresh cadence (5..120)
-    ---@field commodityPollSeconds number per-item commodity rotation beat (5..300)
+    ---@field ownedPollSeconds number owned-list refresh cadence (2..120)
+    ---@field commodityPollSeconds number commodity rotation beat (1..300); searches cost 60/beat per minute TOTAL across the rotation (constant in item count), per-item latency = beat x owned item count
     ---@field itemChannel string auto|passive|click|off
-    ---@field itemRotationSeconds number item rotation beat (10..600)
+    ---@field itemRotationSeconds number item rotation beat (5..600)
     ---@field lowQuantityPct number alert when remaining <= this % of first-seen (0 = off, 0..100)
     ---@field cooldownSeconds table<string, number> per-kind alert cooldown seconds
     ---@field channels table<string, table<string, boolean>> kind -> channel -> enabled
@@ -87,9 +87,14 @@ function Config.defaults()
     ---@field soundFile string|nil custom media path (wins over soundKit when set)
     ---@field flashSeconds number screen-flash duration (0.5..5)
     ---@field toastSeconds number toast lifetime (2..15)
+    -- Cadence budget: the commodity beat costs 60/beat searches per minute
+    -- TOTAL (the rotation spends one query per beat whatever the item count);
+    -- the wire cap is 100/min SHARED with the Blizzard UI and co-resident
+    -- addons. Default beat 2 = 30/min, leaving headroom; the throttle-drop
+    -- backoff (3s beat skip) is the safety valve when the budget runs out.
     return {
-        ownedPollSeconds = 10,
-        commodityPollSeconds = 8,
+        ownedPollSeconds = 3,
+        commodityPollSeconds = 2,
         itemChannel = "auto",
         itemRotationSeconds = 30,
         lowQuantityPct = 25,
@@ -109,9 +114,9 @@ function Config.coerce(untrusted)
     if type(untrusted) ~= "table" then
         return out
     end
-    out.ownedPollSeconds = clampNum(untrusted.ownedPollSeconds, 5, 120, out.ownedPollSeconds)
-    out.commodityPollSeconds = clampNum(untrusted.commodityPollSeconds, 5, 300, out.commodityPollSeconds)
-    out.itemRotationSeconds = clampNum(untrusted.itemRotationSeconds, 10, 600, out.itemRotationSeconds)
+    out.ownedPollSeconds = clampNum(untrusted.ownedPollSeconds, 2, 120, out.ownedPollSeconds)
+    out.commodityPollSeconds = clampNum(untrusted.commodityPollSeconds, 1, 300, out.commodityPollSeconds)
+    out.itemRotationSeconds = clampNum(untrusted.itemRotationSeconds, 5, 600, out.itemRotationSeconds)
     out.itemChannel = channelOf(untrusted.itemChannel, out.itemChannel)
     out.lowQuantityPct = clampNum(untrusted.lowQuantityPct, 0, 100, out.lowQuantityPct)
     out.soundKit = "AUCTION_WINDOW_OPEN"
