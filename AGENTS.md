@@ -45,7 +45,10 @@ AuctiMogger's fork evidence on the same build):
 4. **Gates** (script-context): `QueryOwnedAuctions` PASSES (~0.1s answer).
    Commodity `SendSearchQuery` PASSES (wire doc: 100 searches/min cap).
    Item `SendSearchQuery`/`QueryItem` are REFUSED (empty result sets).
-   Blizzard-handler clicks (`button:Click()`) answer for items.
+   Blizzard-handler clicks (`button:Click()`) answer for items. A commodity
+   answer fires BOTH `COMMODITY_SEARCH_RESULTS_RECEIVED` (payload-LESS) and
+   `COMMODITY_SEARCH_RESULTS_UPDATED` (itemID); the core re-verdicts on both
+   (RECEIVED re-reads the core's own last query).
 5. **Event quirks**: `AUCTION_CANCELED`'s payload is NOT an auctionID
    (garbage value observed); the `CancelAuction` post-hook argument is
    equally untrustworthy; `AUCTION_HOUSE_AUCTION_CREATED` did not fire on

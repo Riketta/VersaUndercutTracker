@@ -22,6 +22,7 @@
 ---@field beatItems fun(self: any) item channel beat
 ---@field onOwnedUpdated fun(self: any) OWNED_AUCTIONS_UPDATED landed
 ---@field onCommodityRows fun(self: any, itemID: number) COMMODITY_SEARCH_RESULTS_UPDATED landed
+---@field onCommodityReceived fun(self: any) COMMODITY_SEARCH_RESULTS_RECEIVED landed (payload-less: re-verdict the last query)
 ---@field onItemRows fun(self: any, itemKey: table) ITEM_SEARCH_RESULTS_UPDATED landed
 ---@field markCancelRequested fun(self: any, auctionID: number) cancel observed for this auction
 ---@field onExpiredHint fun(self: any, auctionID: number) AUCTION_HOUSE_AUCTIONS_EXPIRED

@@ -47,6 +47,9 @@ local function status(console)
         )
     )
     reply(("items: channel=%s probe=%s"):format(s.itemChannel, s.itemProbe))
+    if s.lastCommodityQuery then
+        reply(("last commodity query: #%d (%ds ago)"):format(s.lastCommodityQuery.itemID, s.lastCommodityQuery.age))
+    end
     local any = false
     local keys = {}
     for keyString in pairs(s.verdicts) do
@@ -55,7 +58,7 @@ local function status(console)
     table.sort(keys)
     for _, keyString in ipairs(keys) do
         any = true
-        reply(("  %s -> %s"):format(keyString, s.verdicts[keyString]))
+        reply(("  %s -> %s (%ds ago)"):format(keyString, s.verdicts[keyString], s.verdictAges[keyString] or 0))
     end
     if not any then
         reply("  no verdicts yet (open the auction house)")

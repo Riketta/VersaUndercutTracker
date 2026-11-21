@@ -260,7 +260,8 @@ function Core:beatCommodities()
     if not self.sessionOpen or self.paused then
         return
     end
-    if self.clock:now() < self.throttleUntil then
+    local now = self.clock:now()
+    if now < self.throttleUntil then
         return
     end
     local ids = (self:ownedItemSets())
@@ -268,6 +269,9 @@ function Core:beatCommodities()
         return
     end
     self.commodityCursor = (self.commodityCursor % #ids) + 1
+    -- Remember WHAT was asked and WHEN: RECEIVED carries no payload on this
+    -- fork, so re-verdicting a fresh answer needs the core's own record.
+    self.lastCommodityQuery = { itemID = ids[self.commodityCursor], at = now }
     self.marketPort:queryCommodity(ids[self.commodityCursor])
 end
 
@@ -310,6 +314,18 @@ function Core:beatItems()
     if channel == "click" and self.marketPort.supportsItemClick and self.marketPort:supportsItemClick() then
         self.itemCursor = (self.itemCursor % #itemKeys) + 1
         self.marketPort:clickItemScan(itemKeys[self.itemCursor].itemID)
+    end
+end
+
+--- COMMODITY_SEARCH_RESULTS_RECEIVED: a fresh full answer landed. The event
+--- carries NO payload on this fork (probe-verified), so re-verdict the item
+--- the core itself last asked about. Belt-and-braces alongside UPDATED -
+--- whichever event a given flow fires, the answer is re-verdicted exactly
+--- once (the state machine and cooldown gate prevent double alerts).
+function Core:onCommodityReceived()
+    local last = self.lastCommodityQuery
+    if last and last.itemID then
+        self:onCommodityRows(last.itemID)
     end
 end
 
@@ -461,16 +477,27 @@ function Core:testAlert(kind)
     })
 end
 
---- Status snapshot for the UI/API.
+--- Status snapshot for the UI/API. Verdict ages and the last commodity
+--- query expose poll freshness (a stale age means beats are not landing).
 function Core:status()
+    local now = self.clock:now()
     local summary = self.ownlist:keySummary()
     local activeKeys = 0
     for _ in pairs(summary) do
         activeKeys = activeKeys + 1
     end
     local verdictStates = {}
+    local verdictAges = {}
     for keyString, verdict in pairs(self.verdicts) do
         verdictStates[keyString] = verdict.state
+        verdictAges[keyString] = math.max(0, math.floor(now - (verdict.at or now) + 0.5))
+    end
+    local lastQuery = nil
+    if self.lastCommodityQuery then
+        lastQuery = {
+            itemID = self.lastCommodityQuery.itemID,
+            age = math.max(0, math.floor(now - self.lastCommodityQuery.at + 0.5)),
+        }
     end
     return {
         session = self.sessionOpen,
@@ -479,6 +506,8 @@ function Core:status()
         activeLots = #self.ownlist:activeLots(),
         activeKeys = activeKeys,
         verdicts = verdictStates,
+        verdictAges = verdictAges,
+        lastCommodityQuery = lastQuery,
         itemChannel = self.settings.itemChannel,
         itemProbe = self.itemProbe.state,
     }

@@ -333,6 +333,21 @@ describe("domain core", function()
         assert.is_true(notify.dispatched[2].text:find("2 listings sell before yours") ~= nil)
     end)
 
+    it("re-verdicts the last queried commodity on RECEIVED (payload-less)", function()
+        core:onAhOpen()
+        owned.records = { ownedRecord(178364562, 60, 0) }
+        core:onOwnedUpdated()
+        core:beatCommodities()
+        assert.equals(13935, core.lastCommodityQuery.itemID)
+        market.rowsByItem = { [13935] = { makeRow(954, 3), makeRow(954, 60, 60) } }
+        core:onCommodityReceived()
+        assert.equals("TIED", core.verdicts["i:13935:0:0:0"].state)
+        local s = core:status()
+        assert.equals("TIED", s.verdicts["i:13935:0:0:0"])
+        assert.equals("number", type(s.verdictAges["i:13935:0:0:0"]))
+        assert.equals(13935, s.lastCommodityQuery.itemID)
+    end)
+
     it("skips channel beats during throttle backoff, resumes after", function()
         core:onAhOpen()
         owned.records = { ownedRecord(178364562, 60, 0) }

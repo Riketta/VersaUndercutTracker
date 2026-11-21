@@ -13,6 +13,7 @@ local EVENTS = {
     "AUCTION_HOUSE_CLOSED",
     "OWNED_AUCTIONS_UPDATED",
     "COMMODITY_SEARCH_RESULTS_UPDATED",
+    "COMMODITY_SEARCH_RESULTS_RECEIVED",
     "ITEM_SEARCH_RESULTS_UPDATED",
     "COMMODITY_PURCHASED",
     "AUCTION_HOUSE_AUCTIONS_EXPIRED",
@@ -69,6 +70,9 @@ function Events:dispatch(event, ...)
         if type(itemID) == "number" then
             core:onCommodityRows(itemID)
         end
+    elseif event == "COMMODITY_SEARCH_RESULTS_RECEIVED" then
+        -- Payload-less on this fork: the core re-verdicts its last query.
+        core:onCommodityReceived()
     elseif event == "ITEM_SEARCH_RESULTS_UPDATED" then
         local itemKey = ...
         if type(itemKey) == "table" then
