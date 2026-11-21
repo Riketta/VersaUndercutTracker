@@ -161,5 +161,7 @@ bash scripts/ci_local.sh          # stylua --check, tests, TOC, LLS
 - Alert kinds: undercut, tied, sold, expired, canceled, lowqty, noactive,
   recovered. Market alerts are transition-only plus worsening (a deeper
   undercut or more units/listings ahead of an existing tie re-alerts,
-  cooldown-gated; improvements stay quiet); sold alerts dedup closure-vs-ledger
-  by quantity tag.
+  cooldown-gated; improvements stay quiet); reaching FIRST (or losing own
+  rows) ends the cycle and clears that key's undercut/tied cooldown stamps,
+  so a fresh tie/undercut after a cancel/repost cycle alerts immediately;
+  sold alerts dedup closure-vs-ledger by quantity tag.

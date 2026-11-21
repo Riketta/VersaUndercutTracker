@@ -101,5 +101,21 @@ function AlertPolicy:gate(kind, key, now, tag)
     return true
 end
 
+--- Clears this key's market-degradation stamps (undercut/tied). Called when
+--- a verdict cycle ENDS (own lot back to FIRST, or no own rows): the next
+--- undercut/tie is a fresh event and must alert immediately instead of
+--- inheriting the previous cycle's cooldown window.
+---@param key string keyString
+function AlertPolicy:resetMarket(key)
+    for _, kind in ipairs({ "undercut", "tied" }) do
+        local prefix = kind .. "|" .. key .. "|"
+        for signature in pairs(self.lastAt) do
+            if signature:sub(1, #prefix) == prefix then
+                self.lastAt[signature] = nil
+            end
+        end
+    end
+end
+
 V.domain.Alerts = Alerts
 return Alerts

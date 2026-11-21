@@ -295,6 +295,55 @@ describe("domain core", function()
         assert.equals(2, #notify.dispatched)
     end)
 
+    it("alerts a fresh tie after a cancel/repost cycle reaches FIRST", function()
+        core:onAhOpen()
+        owned.records = { ownedRecord(178364562, 60, 0) }
+        core:onOwnedUpdated()
+        -- cycle one: competitor ties ahead -> alert, tied stamp set
+        market.rowsByItem = { [13935] = { makeRow(954, 3), makeRow(954, 60, 60) } }
+        core:onCommodityRows(13935)
+        assert.equals("tied", notify.dispatched[1].kind)
+        -- user cancels (own rows gone) and reposts cheaper: GONE then FIRST;
+        -- recovered stays quiet from GONE, but the cycle-end must clear stamps
+        market.rowsByItem = { [13935] = {} }
+        core:onCommodityRows(13935)
+        assert.equals("GONE", core.verdicts["i:13935:0:0:0"].state)
+        market.rowsByItem = { [13935] = { makeRow(940, 60, 60), makeRow(954, 3) } }
+        core:onCommodityRows(13935)
+        assert.equals("FIRST", core.verdicts["i:13935:0:0:0"].state)
+        assert.equals(1, #notify.dispatched)
+        -- cycle two: competitor ties the NEW price 30s later - inside the
+        -- 300s tied cooldown inherited from cycle one, but the stamps were
+        -- reset at FIRST, so the fresh tie must alert
+        clock.t = clock.t + 30
+        market.rowsByItem = { [13935] = { makeRow(940, 25), makeRow(940, 60, 60), makeRow(954, 3) } }
+        core:onCommodityRows(13935)
+        assert.equals(2, #notify.dispatched)
+        assert.equals("tied", notify.dispatched[2].kind)
+        assert.is_true(notify.dispatched[2].text:find("25 units sell before yours") ~= nil)
+    end)
+
+    it("alerts a fresh tie after a direct recovery to FIRST", function()
+        core:onAhOpen()
+        owned.records = { ownedRecord(178364562, 60, 0) }
+        core:onOwnedUpdated()
+        market.rowsByItem = { [13935] = { makeRow(954, 3), makeRow(954, 60, 60) } }
+        core:onCommodityRows(13935)
+        assert.equals("tied", notify.dispatched[1].kind)
+        -- the tying competitor sells out: direct TIED -> FIRST recovery
+        market.rowsByItem = { [13935] = { makeRow(954, 60, 60) } }
+        core:onCommodityRows(13935)
+        assert.equals(2, #notify.dispatched)
+        assert.equals("recovered", notify.dispatched[2].kind)
+        -- a NEW competitor re-ties 30s later, inside the tied cooldown
+        clock.t = clock.t + 30
+        market.rowsByItem = { [13935] = { makeRow(954, 12), makeRow(954, 60, 60) } }
+        core:onCommodityRows(13935)
+        assert.equals(3, #notify.dispatched)
+        assert.equals("tied", notify.dispatched[3].kind)
+        assert.is_true(notify.dispatched[3].text:find("12 units sell before yours") ~= nil)
+    end)
+
     it("re-alerts when the undercut deepens", function()
         core:onAhOpen()
         owned.records = { ownedRecord(178364562, 60, 0) }

@@ -16,6 +16,22 @@ describe("domain alerts", function()
         assert.is_true(policy:gate("sold", "i:1:0:0:0", 105, "14"))
     end)
 
+    it("resetMarket clears only this key's undercut/tied stamps", function()
+        local settings = { cooldownSeconds = { undercut = 120, tied = 300, sold = 20 } }
+        local policy = Alerts.new(settings)
+        assert.is_true(policy:gate("tied", "i:1:0:0:0", 100))
+        assert.is_true(policy:gate("undercut", "i:1:0:0:0", 100))
+        assert.is_true(policy:gate("tied", "i:2:0:0:0", 100))
+        assert.is_true(policy:gate("sold", "i:1:0:0:0", 100, "5"))
+        policy:resetMarket("i:1:0:0:0")
+        -- cleared kinds on the reset key re-fire immediately
+        assert.is_true(policy:gate("tied", "i:1:0:0:0", 105))
+        assert.is_true(policy:gate("undercut", "i:1:0:0:0", 105))
+        -- other keys and kinds keep their stamps
+        assert.is_false(policy:gate("tied", "i:2:0:0:0", 105))
+        assert.is_false(policy:gate("sold", "i:1:0:0:0", 105, "5"))
+    end)
+
     it("builds messages for every kind", function()
         assert.equals(
             "[Copper Bar] undercut by 1g 23s 45c (market 9s 54c, yours 10g 77s 89c)",

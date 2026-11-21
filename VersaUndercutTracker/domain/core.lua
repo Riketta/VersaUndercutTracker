@@ -368,12 +368,18 @@ end
 --- a bad state holds (someone else jumped ahead of an existing tie, or the
 --- undercut deepened) - a steady TIED must not go silent as more sellers pile
 --- in front. Improvements stay quiet; full recovery fires its own alert.
---- Cooldowns still gate repeats.
+--- Reaching FIRST (or losing own rows) ENDS the degradation cycle: the key's
+--- market stamps are cleared so the next undercut/tie after a cancel/repost
+--- cycle alerts immediately instead of dying in the previous cycle's
+--- cooldown window. Cooldowns still gate repeats within one cycle.
 function Core:applyVerdict(keyString, itemID, verdict)
     local now = self.clock:now()
     local prev = self.verdicts[keyString]
     verdict.at = now
     self.verdicts[keyString] = verdict
+    if verdict.state == "FIRST" or verdict.state == "GONE" then
+        self.alerts:resetMarket(keyString)
+    end
     local label = self:itemLabel(itemID)
     if prev and prev.state == verdict.state then
         if verdict.state == "TIED" and (verdict.unitsAhead or 0) > (prev.unitsAhead or 0) then
