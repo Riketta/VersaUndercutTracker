@@ -382,6 +382,60 @@ describe("domain core", function()
         assert.is_true(notify.dispatched[2].text:find("2 listings sell before yours") ~= nil)
     end)
 
+    it("pause freezes monitoring; resume re-baselines silently", function()
+        core:onAhOpen()
+        owned.records = { ownedRecord(178364562, 60, 0) }
+        core:onOwnedUpdated()
+        -- establish a tie so verdicts and stamps hold live state
+        market.rowsByItem = { [13935] = { makeRow(954, 3), makeRow(954, 60, 60) } }
+        core:onCommodityRows(13935)
+        assert.equals(1, #notify.dispatched)
+        -- PAUSE: user cancels/reposts; owned diffs, market answers and
+        -- events all arrive - everything stays silent, verdicts untouched
+        core:pause()
+        clock.t = clock.t + 5
+        owned.records = { ownedRecord(178364562, 40, 0) }
+        core:onOwnedUpdated()
+        market.rowsByItem = { [13935] = { makeRow(900, 10), makeRow(954, 60, 60) } }
+        core:onCommodityRows(13935)
+        core:onCommodityReceived()
+        assert.equals(1, #notify.dispatched)
+        assert.equals("TIED", core.verdicts["i:13935:0:0:0"].state)
+        -- RESUME: re-baseline query fired, verdicts and stamps cleared
+        local refreshes = owned.refreshes
+        core:resume()
+        assert.is_true(owned.refreshes > refreshes)
+        assert.is_nil(core.verdicts["i:13935:0:0:0"])
+        -- the post-churn owned snapshot lands on a FRESH baseline: silent
+        clock.t = clock.t + 1
+        core:onOwnedUpdated()
+        assert.equals(1, #notify.dispatched)
+        -- a fresh tie 36s after the original alert (tied cooldown is 120s
+        -- now) still alerts: the resume cleared the market stamps
+        market.rowsByItem = { [13935] = { makeRow(954, 5), makeRow(954, 40, 40) } }
+        core:onCommodityRows(13935)
+        assert.equals(2, #notify.dispatched)
+        assert.equals("tied", notify.dispatched[2].kind)
+    end)
+
+    it("resume while running is a no-op", function()
+        core:onAhOpen()
+        owned.records = { ownedRecord(178364562, 60, 0) }
+        core:onOwnedUpdated()
+        market.rowsByItem = { [13935] = { makeRow(954, 3), makeRow(954, 60, 60) } }
+        core:onCommodityRows(13935)
+        assert.equals(1, #notify.dispatched)
+        local refreshes = owned.refreshes
+        core:resume()
+        assert.equals(refreshes, owned.refreshes)
+        assert.equals("TIED", core.verdicts["i:13935:0:0:0"].state)
+        -- worsening inside the tied cooldown stays gated (stamps preserved)
+        clock.t = clock.t + 30
+        market.rowsByItem = { [13935] = { makeRow(954, 61), makeRow(954, 60, 60) } }
+        core:onCommodityRows(13935)
+        assert.equals(1, #notify.dispatched)
+    end)
+
     it("re-verdicts the last queried commodity on RECEIVED (payload-less)", function()
         core:onAhOpen()
         owned.records = { ownedRecord(178364562, 60, 0) }

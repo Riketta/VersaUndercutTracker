@@ -35,5 +35,8 @@ adapters/inbound/timer.lua
 adapters/inbound/console.lua
 adapters/inbound/slash.lua
 
+# UI (own frames parented into Blizzard chrome)
+ui/pause_button.lua
+
 # Composition root (must be last)
 bootstrap.lua

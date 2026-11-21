@@ -25,15 +25,18 @@ local EVENTS = {
 ---@field core table ControlPort implementor
 ---@field driver table TimerDriver
 ---@field settings Settings
+---@field hooks table|nil optional extra AUCTION_HOUSE_SHOW listeners (e.g.
+---the pause button attach - this adapter stays the SOLE AH event registrar)
 local Events = {}
 Events.__index = Events
 
 ---@param core table
 ---@param driver table
 ---@param settings Settings
+---@param hooks table|nil {onAhOpen?: fun()}
 ---@return EventsAdapter
-function Events.new(core, driver, settings)
-    local self = setmetatable({ core = core, driver = driver, settings = settings }, Events)
+function Events.new(core, driver, settings, hooks)
+    local self = setmetatable({ core = core, driver = driver, settings = settings, hooks = hooks }, Events)
     local frame = CreateFrame("Frame")
     frame:SetScript("OnEvent", function(_, event, ...)
         self:dispatch(event, ...)
@@ -60,6 +63,9 @@ function Events:dispatch(event, ...)
     elseif event == "AUCTION_HOUSE_SHOW" then
         core:onAhOpen()
         self.driver:start(core, self.settings)
+        if self.hooks and self.hooks.onAhOpen then
+            self.hooks.onAhOpen()
+        end
     elseif event == "AUCTION_HOUSE_CLOSED" then
         core:onAhClose()
         self.driver:stop()

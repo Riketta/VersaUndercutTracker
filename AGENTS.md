@@ -91,7 +91,9 @@ VersaUndercutTracker/          the addon folder (full name; TOC title is VUT)
                               flash/toast/bus), savedvars, clock, item_info
   adapters/inbound/           events (sole AH event registrar + cancel
                               post-hook), timer driver, console API, slash
-  bootstrap.lua                composition root (ADDON_LOADED; only place
+  ui/                         own frames parented into Blizzard chrome
+                              (AH-frame pause button, title strip)
+  bootstrap.lua               composition root (ADDON_LOADED; only place
                               that instantiates adapters and injects ports)
 VUTProbe/                      dev-only dump probe (packaged separately)
 spec/                          busted specs (pure domain; run via shim)
@@ -125,7 +127,10 @@ Blizzard objects: event registration, `hooksecurefunc` POST-hooks
 `button:Click()` on rendered Auctions summary rows (runs Blizzard's own
 handler - the proven gate-clean path; never call frame mixin methods from
 addon context, the search gate refuses those queries). Flash/toast frames are
-ours; nothing touches shared fade/flash tables or Blizzard containers.
+ours; nothing touches shared fade/flash tables or Blizzard containers. The
+pause button is our own `CreateFrame` child of `AuctionHouseFrame` in the
+title-strip chrome (verified empty in the 1.60.1.70790 dump: between the
+centered title and CloseButton) - parenting/anchoring only.
 
 ## Gates (every change, before commit)
 
@@ -158,6 +163,11 @@ bash scripts/ci_local.sh          # stylua --check, tests, TOC, LLS
 - The `/run VUT.*` machine API and `/vut` slash share the console adapter;
   every settings write goes through `Config.coerce` on a candidate copy,
   mutates the shared table in place, persists, then restarts timers.
+- Pause (slash or AH-frame button) is a FULL monitoring freeze: no beats, no
+  owned ingestion, no verdicts, no alerts. Resume re-baselines silently
+  (fresh own-list baseline, no pending noactive keys, no stale verdicts or
+  market stamps) so cancel/repost churn during the pause never replays as
+  alerts; resuming while running is a no-op.
 - Alert kinds: undercut, tied, sold, expired, canceled, lowqty, noactive,
   recovered. Market alerts are transition-only plus worsening (a deeper
   undercut or more units/listings ahead of an existing tie re-alerts,

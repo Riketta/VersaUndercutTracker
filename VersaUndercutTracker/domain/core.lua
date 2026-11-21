@@ -150,7 +150,11 @@ end
 --- OWNED_AUCTIONS_UPDATED landed: read + diff + evaluate aggregates.
 --- Partial snapshots are never ingested: the ledger baseline is only valid
 --- when complete, or late-arriving pre-session rows replay as sold alerts.
+--- While paused the snapshot is skipped entirely - resume() re-baselines.
 function Core:onOwnedUpdated()
+    if self.paused then
+        return
+    end
     if not self.ownedPort:hasFull() then
         return
     end
@@ -330,7 +334,12 @@ function Core:onCommodityReceived()
 end
 
 --- COMMODITY_SEARCH_RESULTS_UPDATED(itemID): read rows, verdict, transitions.
+--- Paused: no verdicts - the user's own browsing during a cancel/repost
+--- churn must not alert, and mid-churn positions are garbage anyway.
 function Core:onCommodityRows(itemID)
+    if self.paused then
+        return
+    end
     local rows = self.marketPort:readCommodityRows(itemID)
     local verdict = Queue.commodity(rows)
     self:applyVerdict(
@@ -342,6 +351,9 @@ end
 
 --- ITEM_SEARCH_RESULTS_UPDATED(itemKey): read rows, verdict, transitions.
 function Core:onItemRows(itemKey)
+    if self.paused then
+        return
+    end
     if type(itemKey) ~= "table" or not Types.isItemKey(itemKey) then
         return
     end
@@ -428,16 +440,25 @@ function Core:markCancelRequested(auctionID)
 end
 
 function Core:onExpiredHint(auctionID)
+    if self.paused then
+        return
+    end
     self.ownlist:markExpiredHint(auctionID)
     self.ownedPort:refresh()
 end
 
 function Core:onCanceledHint()
+    if self.paused then
+        return
+    end
     self.ownlist:openCancelWindow(self.clock:now(), 10)
     self.ownedPort:refresh()
 end
 
 function Core:onCommodityPurchased(itemID, quantity)
+    if self.paused then
+        return
+    end
     local keyString = Types.keyString({ itemID = itemID, itemLevel = 0, itemSuffix = 0, battlePetSpeciesID = 0 })
     self.keyItemIDs[keyString] = itemID
     self:dispatch("sold", keyString, { quantity = quantity }, self:itemLabel(itemID), tostring(quantity))
@@ -450,8 +471,23 @@ function Core:pause()
     self.paused = true
 end
 
+--- Unpause. Everything that changed while paused (cancels, reposts, sales)
+--- must NOT replay as alerts: re-baseline silently, exactly like session
+--- start - fresh own-list baseline, no pending no-active keys, no stale
+--- verdicts or market stamps. Idempotent: resuming while running is a no-op
+--- (and must not wipe live state).
 function Core:resume()
+    if not self.paused then
+        return
+    end
     self.paused = false
+    for keyString in pairs(self.verdicts) do
+        self.alerts:resetMarket(keyString)
+    end
+    self.verdicts = {}
+    self.keyHadActive = {}
+    self.ownlist = OwnList.new()
+    self.ownedPort:refresh()
 end
 
 --- Immediate full pass: owned refresh + every commodity once + one item beat.

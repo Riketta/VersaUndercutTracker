@@ -28,6 +28,7 @@ local wow_api = {
     "C_Timer",
     "CreateFrame",
     "Enum",
+    "GameTooltip",
     "GetTime",
     "hooksecurefunc",
     "PlaySound",
@@ -51,6 +52,13 @@ files["VersaUndercutTracker/adapters"] = {
         "SLASH_VUT1",
         
         "SlashCmdList",
+        unpack(wow_api),
+    },
+}
+
+files["VersaUndercutTracker/ui"] = {
+    globals = {
+        "VUT",
         unpack(wow_api),
     },
 }

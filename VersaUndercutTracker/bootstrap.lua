@@ -34,10 +34,10 @@ local function build()
         persist = persist,
     })
     local driver = V.adapters.TimerDriver.new()
-    V.adapters.EventsAdapter.new(core, driver, settings)
 
     -- Machine API + slash share the console adapter; settings writes restart
-    -- the beat timers (cadence knobs take effect immediately).
+    -- the beat timers (cadence knobs take effect immediately). Built before
+    -- the events adapter so its AUCTION_HOUSE_SHOW hook can reach it.
     local console = V.adapters.ConsoleAdapter.new({
         core = core,
         settings = settings,
@@ -48,6 +48,14 @@ local function build()
     })
     V.adapters.SlashAdapter.register(console)
     V.api = console
+
+    V.adapters.EventsAdapter.new(core, driver, settings, {
+        -- The pause button lives in the AH frame chrome; the frame is
+        -- LoadOnDemand, so attach when it certainly exists (AH open).
+        onAhOpen = function()
+            V.ui.PauseButton.attach(console)
+        end,
+    })
 
     print("|cff33ccffVUT|r 0.1.0 loaded - /vut help")
 end
