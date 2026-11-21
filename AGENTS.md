@@ -24,7 +24,11 @@ AuctiMogger's fork evidence on the same build):
    queue position (the UI "detailed" second-click view; observed in game:
    first click refreshes the cached shape in place via HasSearchResults ->
    RefreshItemSearchResults, second click re-queries). VUT queries with
-   `true`; positions are row-granular in that shape.
+   `true`; positions are row-granular in that shape. VERIFIED in game
+   (2026-11): `separate=true` from script passes the gate; own lots return as
+   individual rows in post-time position within the tier (newest first,
+   auctionID-descending), while foreign same-price listings may still merge
+   among themselves - rows above the first own row are the unitsAhead.
 3. **Owned list** (`GetOwnedAuctionInfo`): `status 0=Active, 1=Sold`; the
    status-1 rows are a per-sale LEDGER (qty + gold; `buyoutAmount = qty x
    unit price` there), can repeat an auctionID, and vanish eventually.
@@ -63,8 +67,7 @@ AuctiMogger's fork evidence on the same build):
    ITEM_KEY_ITEM_INFO_RECEIVED (unpaced re-probes are a request flood).
    Own ITEM lots carry the full hyperlink; commodity records do not.
 
-Still to verify in game: `separateOwnerItems=true` commodity queries from
-script still pass the gate and return the separated shape; `RefreshItemSearchResults` from script for held keys
+Still to verify in game: `RefreshItemSearchResults` from script for held keys
 (the core probes it once per session - `/vut probe` re-runs); stacked ITEM
 lot `buyoutAmount` total-vs-unit; `COMMODITY_PURCHASED` seller-side payload
 (the ledger already covers sales).
