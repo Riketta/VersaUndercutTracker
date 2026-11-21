@@ -45,7 +45,7 @@ end
 --- except canceled (noise).
 local DEFAULT_CHANNELS = {
     undercut = { chat = true, sound = true, flash = true, toast = true },
-    tied = { chat = true, sound = false, flash = false, toast = true },
+    tied = { chat = true, sound = true, flash = true, toast = true },
     sold = { chat = true, sound = false, flash = false, toast = true },
     expired = { chat = true, sound = false, flash = false, toast = true },
     canceled = { chat = false, sound = false, flash = false, toast = false },
@@ -56,7 +56,7 @@ local DEFAULT_CHANNELS = {
 
 local DEFAULT_COOLDOWNS = {
     undercut = 120,
-    tied = 300,
+    tied = 120,
     sold = 20,
     expired = 20,
     canceled = 0,

@@ -14,7 +14,7 @@ local Alerts = {}
 --- "alert" pulls eyes back to the screen, "warn" informs, "info" records.
 Alerts.SEVERITY = {
     undercut = "alert",
-    tied = "warn",
+    tied = "alert",
     sold = "info",
     expired = "warn",
     canceled = "info",

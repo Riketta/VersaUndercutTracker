@@ -13,7 +13,11 @@ describe("domain config", function()
         end
         assert.is_true(s.channels.undercut.sound)
         assert.is_true(s.channels.undercut.flash)
-        assert.is_false(s.channels.tied.sound)
+        -- tied means someone sits IN FRONT at the same price: same urgency
+        -- as an undercut (own lot is not first), same channels and cooldown
+        assert.is_true(s.channels.tied.sound)
+        assert.is_true(s.channels.tied.flash)
+        assert.equals(120, s.cooldownSeconds.tied)
     end)
 
     it("coerces an untrusted blob: clamps, whitelists, defaults", function()
