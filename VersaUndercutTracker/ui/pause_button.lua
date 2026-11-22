@@ -57,7 +57,7 @@ function PauseButton.attach(console)
     -- Chrome level: above TitleContainer (510) / jump hints (515), below the
     -- modal DialogOverlay (1000) that should still cover everything.
     button:SetFrameLevel(600)
-    button:SetPoint("TOPRIGHT", ah, "TOPRIGHT", -40, -3)
+    button:SetPoint("TOPRIGHT", ah, "TOPRIGHT", -70, -1)
     button:SetSize(96, 18)
     button:SetScript("OnClick", function()
         if console:status().paused then
