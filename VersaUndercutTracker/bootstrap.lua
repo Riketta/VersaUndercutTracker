@@ -51,9 +51,13 @@ local function build()
 
     V.adapters.EventsAdapter.new(core, driver, settings, {
         -- The pause button lives in the AH frame chrome; the frame is
-        -- LoadOnDemand, so attach when it certainly exists (AH open).
+        -- LoadOnDemand, so attach when it certainly exists (AH open). Guarded:
+        -- a missing UI module must never break the event handler.
         onAhOpen = function()
-            V.ui.PauseButton.attach(console)
+            local pauseButton = V.ui and V.ui.PauseButton
+            if pauseButton then
+                pauseButton.attach(console)
+            end
         end,
     })
 

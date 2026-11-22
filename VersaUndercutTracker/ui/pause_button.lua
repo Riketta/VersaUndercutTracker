@@ -35,7 +35,7 @@ end
 
 --- Creates the button inside the auction house frame, once per session.
 --- Called on every AUCTION_HOUSE_SHOW: AuctionHouseUI is LoadOnDemand, so
---- the frame may not exist until the first open.
+--- the frame may not exist until the first open - if so, retry briefly.
 ---@param console ConsoleAdapter
 ---@return boolean attached
 function PauseButton.attach(console)
@@ -44,8 +44,15 @@ function PauseButton.attach(console)
     end
     local ah = AuctionHouseFrame
     if not ah then
+        if (PauseButton.retries or 0) < 10 then
+            PauseButton.retries = (PauseButton.retries or 0) + 1
+            C_Timer.After(0.5, function()
+                PauseButton.attach(console)
+            end)
+        end
         return false
     end
+    PauseButton.retries = 0
     local button = CreateFrame("Button", nil, ah, "UIPanelButtonTemplate")
     button:SetPoint("TOPRIGHT", ah, "TOPRIGHT", -40, -3)
     button:SetSize(96, 18)
