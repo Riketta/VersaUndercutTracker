@@ -58,6 +58,10 @@ local function build()
             if pauseButton then
                 pauseButton.attach(console)
             end
+            local paint = V.ui and V.ui.UndercutPaint
+            if paint then
+                paint.enable(console)
+            end
         end,
     })
 

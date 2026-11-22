@@ -33,6 +33,7 @@ local wow_api = {
     "hooksecurefunc",
     "PlaySound",
     "PlaySoundFile",
+    "ScrollUtil",
     "SOUNDKIT",
     "UIParent",
     "time",

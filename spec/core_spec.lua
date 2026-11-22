@@ -436,6 +436,29 @@ describe("domain core", function()
         assert.equals(1, #notify.dispatched)
     end)
 
+    it("status exposes the not-first set for the summary painter", function()
+        core:onAhOpen()
+        owned.records = { ownedRecord(178364562, 60, 0) }
+        core:onOwnedUpdated()
+        -- tied item + first item: only the tied key lands in notFirst
+        market.rowsByItem = { [13935] = { makeRow(954, 3), makeRow(954, 60, 60) } }
+        core:onCommodityRows(13935)
+        owned.records = {
+            ownedRecord(178364562, 60, 0),
+            ownedRecord(178364563, 20, 0, { itemID = 13932, itemLevel = 45 }),
+        }
+        core:onOwnedUpdated()
+        market.rowsByItem[13932] = { makeRow(954, 20, 20), makeRow(955, 100) }
+        core:onCommodityRows(13932)
+        local s = core:status()
+        assert.is_true(s.notFirst["i:13935:0:0:0"])
+        assert.is_nil(s.notFirst["i:13932:0:0:0"])
+        -- recovery drops the key from the set
+        market.rowsByItem[13935] = { makeRow(954, 60, 60) }
+        core:onCommodityRows(13935)
+        assert.is_nil(core:status().notFirst["i:13935:0:0:0"])
+    end)
+
     it("re-verdicts the last queried commodity on RECEIVED (payload-less)", function()
         core:onAhOpen()
         owned.records = { ownedRecord(178364562, 60, 0) }

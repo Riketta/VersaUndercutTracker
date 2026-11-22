@@ -530,9 +530,16 @@ function Core:status()
     end
     local verdictStates = {}
     local verdictAges = {}
+    local notFirst = {}
     for keyString, verdict in pairs(self.verdicts) do
         verdictStates[keyString] = verdict.state
         verdictAges[keyString] = math.max(0, math.floor(now - (verdict.at or now) + 0.5))
+        -- UNDERCUT/TIED mean foreign competition sits ahead of the own lot:
+        -- the summary-row painter consumes this set (display policy stays
+        -- domain-side; the adapter only renders).
+        if verdict.state == "UNDERCUT" or verdict.state == "TIED" then
+            notFirst[keyString] = true
+        end
     end
     local lastQuery = nil
     if self.lastCommodityQuery then
@@ -549,6 +556,7 @@ function Core:status()
         activeKeys = activeKeys,
         verdicts = verdictStates,
         verdictAges = verdictAges,
+        notFirst = notFirst,
         lastCommodityQuery = lastQuery,
         itemChannel = self.settings.itemChannel,
         itemProbe = self.itemProbe.state,

@@ -92,7 +92,8 @@ VersaUndercutTracker/          the addon folder (full name; TOC title is VUT)
   adapters/inbound/           events (sole AH event registrar + cancel
                               post-hook), timer driver, console API, slash
   ui/                         own frames parented into Blizzard chrome
-                              (AH-frame pause button, title strip)
+                              (AH-frame pause button; red summary rows
+                              for undercut items via ScrollUtil callback)
   bootstrap.lua               composition root (ADDON_LOADED; only place
                               that instantiates adapters and injects ports)
 VUTProbe/                      dev-only dump probe (packaged separately)
@@ -130,7 +131,12 @@ addon context, the search gate refuses those queries). Flash/toast frames are
 ours; nothing touches shared fade/flash tables or Blizzard containers. The
 pause button is our own `CreateFrame` child of `AuctionHouseFrame` in the
 title-strip chrome (verified empty in the 1.60.1.70790 dump: between the
-centered title and CloseButton) - parenting/anchoring only.
+centered title and CloseButton) - parenting/anchoring only. The Auctions
+summary-row paint hooks through the official
+`ScrollUtil.AddInitializedFrameCallback` (post-init addon access point) and
+writes only `SetTextColor` on the row's own Text, restoring the captured
+original color; verdict-driven display policy (which states count as
+not-first) lives in the domain (`status().notFirst`).
 
 ## Gates (every change, before commit)
 
