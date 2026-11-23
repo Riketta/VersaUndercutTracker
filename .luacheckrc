@@ -14,7 +14,9 @@ cache = true
 max_line_length = 150
 self = false
 
-exclude_files = { "tools/**" }
+-- CI's luarocks install lands in a repo-local .luarocks tree; the local
+-- LuaLS/StyLua distributions live under tools/.
+exclude_files = { ".luarocks/**", "tools/**" }
 
 globals = {
     "VUT",
