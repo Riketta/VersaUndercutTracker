@@ -18,15 +18,23 @@ describe("slash adapter (pure parsing)", function()
                 return true, ("cooldown.%s = %s"):format(kind, tostring(seconds))
             end,
         }
-        SlashCmdList = {}
+        -- Real busted sandboxes each spec file's environment: bare global
+        -- writes stay local and never reach the adapter. Go through _G so
+        -- both the shim and real busted exercise the real registration.
+        _G.SlashCmdList = {}
         ---@diagnostic disable-next-line: assign-type-mismatch
         Slash.register(console)
-        handler = SlashCmdList.VUT
+        handler = _G.SlashCmdList.VUT
+    end)
+
+    after_each(function()
+        _G.SlashCmdList = nil
+        _G.SLASH_VUT1 = nil
     end)
 
     it("registers the /vut slash command", function()
         assert.is_not_nil(handler)
-        assert.equals("/vut", SLASH_VUT1)
+        assert.equals("/vut", _G.SLASH_VUT1)
     end)
 
     it("splits kind.channel on the literal dot", function()

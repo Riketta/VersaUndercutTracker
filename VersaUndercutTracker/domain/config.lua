@@ -77,7 +77,9 @@ function Config.defaults()
     end
     ---@class Settings
     ---@field ownedPollSeconds number owned-list refresh cadence (2..120)
-    ---@field commodityPollSeconds number commodity rotation beat (1..300); searches cost 60/beat per minute TOTAL across the rotation (constant in item count), per-item latency = beat x owned item count
+    ---@field commodityPollSeconds number commodity rotation beat (1..300);
+    ---searches cost 60/beat per minute TOTAL across the rotation (constant in
+    ---item count), per-item latency = beat x owned item count
     ---@field itemChannel string auto|passive|click|off
     ---@field itemRotationSeconds number item rotation beat (5..600)
     ---@field lowQuantityPct number alert when remaining <= this % of first-seen (0 = off, 0..100)

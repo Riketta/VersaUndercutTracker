@@ -254,7 +254,6 @@ function Core:evaluateAggregates(closedKeys)
     for keyString, agg in pairs(summary) do
         self.keyHadActive[keyString] = agg.itemID
     end
-    now = now
 end
 
 -- ===== market layer ===========================================================

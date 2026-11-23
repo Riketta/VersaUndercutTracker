@@ -66,7 +66,9 @@ end
 --- position uses the DELIVERED row order (the same order the UI displays;
 --- buyers practically buy top-down).
 ---@param rows ItemRow[] sanitized rows in delivered (display) order
----@return table verdict {state: string, cheapest?: number, ownMin?: number, by?: number, cheaperCount?: number, tiedCount?: number, rowsAhead?: number, unitsAhead?: number}
+---@return table verdict {state: string, cheapest?: number, ownMin?: number,
+---by?: number, cheaperCount?: number, tiedCount?: number, rowsAhead?: number,
+---unitsAhead?: number}
 function Queue.item(rows)
     if type(rows) ~= "table" or #rows == 0 then
         return { state = "GONE" }
