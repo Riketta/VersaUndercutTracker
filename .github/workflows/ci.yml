@@ -45,6 +45,12 @@ jobs:
         env:
           LLS_VERSION: 3.19.1
         run: |
+          # luarocks installs rocks into a workspace-local .luarocks tree (see
+          # the LUA_PATH env); LLS --check scans it even with workspace.ignore
+          # entries (dot-dir exclusion is unreliable - verified on 3.19.1), so
+          # drop the tree before the type check. luacheck excludes the same
+          # tree via .luacheckrc instead (it runs before this step).
+          rm -rf .luarocks
           curl -fL "https://github.com/LuaLS/lua-language-server/releases/download/${LLS_VERSION}/lua-language-server-${LLS_VERSION}-linux-x64.tar.gz" -o "$RUNNER_TEMP/lls.tar.gz"
           mkdir -p "$RUNNER_TEMP/lls"
           tar -xzf "$RUNNER_TEMP/lls.tar.gz" -C "$RUNNER_TEMP/lls"
