@@ -73,6 +73,19 @@ local function paintRow(frame, elementData, notFirst)
     end
 end
 
+--- Normalizes the two callback shapes of AddInitializedFrameCallback: the
+--- OnInitializedFrame EVENT passes (owner, frame, elementData), while the
+--- iterateExisting pass forwards straight into ForEachFrame's
+--- (frame, elementData). We register with a nil owner, so a table in the
+--- first position is always the frame itself.
+---@return table frame, any elementData
+function UndercutPaint.frameArgs(a, b, c)
+    if type(a) == "table" then
+        return a, b
+    end
+    return b, c
+end
+
 --- Installs the paint callback on the summary list's ScrollBox, once per
 --- session (the callback survives AH close/reopen; rows re-init on reopen).
 ---@param console ConsoleAdapter
@@ -90,7 +103,8 @@ function UndercutPaint.enable(console)
     then
         return false
     end
-    ScrollUtil.AddInitializedFrameCallback(scrollBox, function(_, frame, elementData)
+    ScrollUtil.AddInitializedFrameCallback(scrollBox, function(a, b, c)
+        local frame, elementData = UndercutPaint.frameArgs(a, b, c)
         paintRow(frame, elementData, console:status().notFirst or {})
     end, nil, true)
     installed = true
